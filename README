@@ -1,0 +1,338 @@
+# NP-impulse (Non-perturbative treatment of impulsive encounter)
+# Codes to compute energy transfer in impulsive encounters along straight and eccentric orbits
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# Written by Uddipan Banik
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# --------------------------BRIEF DESCRIPTION--------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+
+These codes compute the energy transfer in impulsive encounters along straight-line and eccentric orbits. 
+The computation is performed non-pertubatively, without making any approximation for the impact parameter. 
+Throughout we assume spherically symmetric subject and perturber density profiles. 
+The cases of axisymmetric spheroidal and disk perturber profiles will be uploaded soon. 
+We compare our general formalism with the distant tide approximation results of Spitzer 1958 and Gnedin et al. 1999.
+See Banik & van den Bosch 2020 for more details.
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ------------------GENERAL INSTRUCTIONS FOR THE USER------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+
+All functions for the subject and the perturber profiles and for computing the integrals are listed in the Python scripts 
+"straight_functions_spherical_perturber.py" and "eccentric_functions_spherical_perturber.py". The following units are used:
+
+Length: scale radius of the subject (rs)
+Velocity: internal velocity dispersion of the subject (sigma)
+Mass: subject mass (Ms)
+
+
+# ------------------------------------------------
+# ------------------------------------------------
+# -------------INTEGRATION PARAMETERS-------------
+# ------------------------------------------------
+# ------------------------------------------------
+
+#---------straight_functions_spherical_perturber.py---------
+
+epsinit=1e-7                  #Integration limits: Lower limit a -> a*(1+epsinit), upper limit b -> b*(1-epsinit), to avoid divergence of the integrand (if any)
+                                                                                                                                   #Default: 1e-7
+EPSABS_plummer                #Absolute tolerance for the integrals for Plummer sphere subject                                     #Default: 1e-8
+EPSREL_plummer                #Relative tolerance for the integrals for Plummer sphere subject                                     #Default: 1e-8
+EPSABS=1e-7                   #Absolute tolerance for the integrals for other subjects                                             #Default: 1e-7
+EPSREL=1e-2                   #Relative tolerance for the integrals for other subjects                                             #Default: Cored subject: 1e-7, Cuspy subject: 1e-2 
+maxiter=100                   #Maximum no of iterations for adaptive quadrature                                                    #Default: 100
+zetamax=1e4                   #Upper limit of integerals involved in computing chi(b) in the Gnedin et al. 1999 formalism for distant encounters
+                                                                                                                                   #Default: 1e4
+
+#---------eccentric_functions_spherical_perturber.py---------
+
+eps                           #Integration limits: Lower limit a -> a*(1+eps), upper limit b -> b*(1-eps), to avoid divergence of the integrand (if any)
+                                                                                                                                   #Default: 1e-5
+EPSABS                        #Absolute tolerance for the integrals                                                                #Default: 1e-7
+EPSREL                        #Relative tolerance for the integrals                                                                #Default: Cored subject: 1e-7, Cuspy subject: 1e-2
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+
+# ------------------------------------------------
+# ------------------------------------------------
+# ---------PERTURBER AND SUBJECT PROFILES---------
+# ------------------------------------------------
+# ------------------------------------------------
+
+The code incorporates a few perturber and subject profiles that are flagged as follows:
+
+# ---Straight-line orbit---
+
+# Perturber
+
+Point mass: 1
+Plummer sphere: 2
+Hernquist sphere: 3
+NFW: 4
+Isochrone potential: 5
+
+# Subject
+
+Plummer sphere: 1
+Hernquist sphere: 2
+NFW: 3
+
+
+# ---Eccentric orbit---
+
+# Perturber
+
+Hernquist sphere: 1
+NFW: 2
+Plummer sphere: 3
+Isochrone potential: 4
+
+# Subject
+
+Plummer sphere: 1
+Hernquist sphere: 2
+NFW: 3
+
+
+The user can add their own perturber and subject profiles in the 'Perturber' and 'Subject' sections of 
+"straight_functions_spherical_perturber.py" and "eccentric_functions_spherical_perturber.py", 
+and add the corresponding flags in the notebooks.
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#-------------------------------------------
+#-------------------------------------------
+#-------------CODE DESCRIPTION--------------
+#-------------------------------------------
+#-------------------------------------------
+
+
+#---------straight_encounter_impulse.ipynb---------
+
+The ipython notebook "straight_encounter_impulse.ipynb" computes the local velocity change of the subject during an encounter
+along a straight-line orbit with the perturber. The local velocity change is calculated at the coordinates (x,y,z) of a subject star 
+as a function of impact parameter and encounter velocity. 
+
+#-------------------------------------------
+#-------------Input parameters--------------
+#-------------------------------------------
+
+mass_ratio                   #Subject mass Ms/Perturber mass Mp
+rp                           #Perturber scale radius rp
+Rc                           #Truncation radius of the subject (<bmin for point perturber)
+rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax
+epsinit=1e-7                 #Integration limits: Lower limit a -> a*(1+epsinit), upper limit b -> b*(1-epsinit), to avoid divergence of the integrand (if any)
+
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 3: Hernquist sphere, 4: NFW, 5: Isochrone
+subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
+
+if (subject_flag==3):        #NFW subject concentration
+    c1=Rc                    #Truncated subject
+    c2=rmax                  #Infinite subject
+else:
+    c1=np.nan
+    c2=np.nan
+
+bmin                         #Minimum impact parameter
+bmax                         #Maximum impact parameter
+Nb                           #No of points for impact parameter
+impact=np.logspace(np.log10(bmin),np.log10(bmax),num=Nb)           #Impact parameter
+
+vpmin                        #Minimum encounter velocity
+vpmax                        #Maximum encounter velocity
+Nvp                          #No of points for encounter velocity
+vp=np.logspace(np.log10(vpmin),np.log10(vpmax),num=Nvp)            #Encounter velocity
+
+adcorr_flag                  #Adiabatic correction- 1: on, 0: off
+
+
+# -----------------------------------------------------------------------------------
+
+
+#---------straight_encounter_spherical_impact.ipynb---------
+
+The ipython notebook "straight_encounter_spherical_impact.ipynb" computes the total internal energy change of the subject during an encounter
+along a straight-line orbit with the perturber. The internal energy change is plotted as a function of the impact parameter 
+for given perturber and subject profiles and encounter velocity, and for different values of the ratio of the scale radii of the 
+perturber (rp) and the subject (rs).
+
+#-------------------------------------------
+#-------------Input parameters--------------
+#-------------------------------------------
+
+bmin                         #Minimum impact parameter
+bmax                         #Maximum impact parameter
+Nb                           #No of points in impact parameter range
+impact=np.logspace(np.log10(bmin),np.log10(bmax),num=Nb) #Impact parameter
+
+
+mass_ratio                   #Subject mass Ms/Perturber mass Mp
+rp                           #Perturber scale radius rp
+Rc                           #Truncation radius of the subject (<bmin for point perturber)
+rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax (<bmin for point perturber)
+
+Rinterpmax                   #Maximum projected radius (infinite subject) for integration to compute the internal energy chane for zero impact parameter
+Rtruncinterpmax              #Maximum projected radius (truncated subject) for integration to compute the internal energy chane for zero impact parameter
+NRinterp                     #No of Rinterp
+
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 4: NFW, 5: Isochrone
+subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
+ 
+
+EPSABS0                      #Absolute tolerance of the integration for zero impact parameter, default: 1e-8
+EPSREL0                      #Relative tolerance of the integration for zero impact parameter, default: 1e-8
+
+
+# -----------------------------------------------------------------------------------
+
+
+#---------straight_encounter_spherical_rtrunc.ipynb---------
+
+The ipython notebook "straight_encounter_spherical_impact.ipynb" computes the total internal energy change of the subject during an encounter
+along a straight-line orbit with the perturber. The internal energy change is plotted as a function of the truncation radius of the subject
+for given perturber and subject profiles, encounter velocity, and for different values of the impact parameter.
+
+#-------------------------------------------
+#-------------Input parameters--------------
+#-------------------------------------------
+
+Nb                           #No of points in impact parameter range
+bmin                         #Minimum impact parameter
+bmax                         #Maximum impact parameter
+impact=np.logspace(np.log10(bmin),np.log10(bmax),num=Nb) #Impact parameters
+
+Nc                           #No of truncation radii
+Rcmin                        #Minimum truncation radius
+Rcmax                        #Maximum truncation radius (>bmin for point perturber)
+Rc=np.logspace(np.log10(Rcmin),np.log10(Rcmax),num=Nc)   #Truncation radii
+
+rp                           #Perturber scale radius rp
+rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax (>bmin for point perturber)
+
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 4: NFW, 5: Isochrone
+subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
+
+
+#Integration parameters 
+
+EPSABS0                      #Absolute tolerance of the integration for zero impact parameter, default: 1e-8
+EPSREL0                      #Relative tolerance of the integration for zero impact parameter, default: 1e-8
+
+
+# -----------------------------------------------------------------------------------
+
+
+#---------straight_encounter_spherical_mass_loss.ipynb---------
+
+The ipython notebook "straight_encounter_spherical_mass_loss.ipynb" computes the unbound fraction of subject stars during mutual encounters between
+globular clusters (modelled as Plummer spheres) and cold dark matter haloes (modelled as NFW spheres). The impulse is given to each of 10^6 
+subject stars sampled from the self-consistent distribution function (using particle_sampler.py). The position and velocity data of the stars for
+Plummer sphere ad NFW density profiles of the subject are stored in the HDF5 files, particle_data_plummer.h5 and particle_data_NFW.h5 respectively.
+The unbound fraction is calculated by noting what fraction of the stars gain internal energy exceeding their initial binding energy. The unbound fraction
+is plotted as a function of the encounter velocity for different values of impact parameter.
+
+#-------------------------------------------
+#-------------Input parameters--------------
+#-------------------------------------------
+
+mass_ratio                   #Subject mass Ms/Perturber mass Mp
+q=1/mass_ratio
+rp                           #Perturber scale radius rp
+Rc                           #Truncation radius (<bmin for point perturber)
+rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax; c (NFW subject); (<bmin for point perturber) 
+
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 3: Hernquist sphere, 4: NFW, 5: Isochrone
+subject_flag                 #subject_flag: 1: Plummer sphere, 3: NFW
+
+if (subject_flag==3):        #NFW concentration
+    c1=Rc                    
+    c2=rmax
+else:
+    c1=np.nan
+    c2=np.nan
+
+impact                       #Impact parameter
+
+vpmin                        #Minimum encounter velocity
+vpmax                        #Maximum encounter velocity
+Nvp                          #No of points in encounter velocity range
+vp=np.logspace(np.log10(vpmin),np.log10(vpmax),num=Nvp) #Encounter velocity
+
+adcorr_flag                  #Adiabatic correction- 1: on, 0: off
+
+
+# -----------------------------------------------------------------------------------
+
+
+# ---eccentric_encounter_spherical.ipynb---
+
+The ipython notebook "eccentric_encounter_spherical.ipynb" computes the total internal energy change of the subject during an encounter
+along an eccentric orbit in the perturber potential. The internal energy change is plotted as a function of the orbital eccentricity
+for fixed orbital energy and perturber and subject profiles.
+
+
+Rc                           #Truncation radius 1
+x                            #Truncation radius 2/ Truncation radius 1
+NR                           #No of points in R(theta)
+
+rp                           #Perturber scale radius in units of rs
+mass_ratio                   #Subject mass Ms/Perturber mass Mp
+
+perturber_flag               #perturber_flag: 1: Hernquist sphere, 2: NFW, 3: Plummer sphere, 4: Isochrone
+subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
+
+if (subject_flag==3):        #NFW concentration
+    c1=Rc                    
+    c2=x*Rc
+else:
+    c1=np.nan
+    c2=np.nan
+    
+Ne                           #No of points in eccentricity e; Default: 100
+emin                         #Minimum eccentricity, default: 0.001
+emax                         #Maximum eccentricity, default: 0.999
+e0=np.linspace(emin,0.009,(int)(Ne/4))
+e1=np.linspace(0.01,0.949,(int)(Ne/2))
+e2=np.linspace(0.95,emax,(int)(Ne/4))
+e=np.array(e0.tolist()+e1.tolist()+e2.tolist())
+
+E0                           #Orbital energy (bound: <0) Minimum value = -1 for perturber_flag=1,2,3 but -0.5 for 4
+
+adcorr_flag                  #Adiabatic correction: 1- on, 0- off
+
+
+# -----------------------------------------------------------------------------------
+
+The plots in Banik & van den Bosch 2020 are generated in the "..._plotter.ipynb" ipython notebooks.
+
+# -----------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+

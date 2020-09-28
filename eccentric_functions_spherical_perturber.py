@@ -27,15 +27,14 @@ import time
 import os
 import h5py
 
-#-----------------------------------------------------------------
 
-#Code parameters
+#-------------------------------Code parameters----------------------------
 
 eps=1e-5
 EPSABS=1e-7 #Default: 1e-7
-EPSREL=1e-2 #Default: 1e-7
+EPSREL=1e-2 #Default: Cored subject: 1e-7, Cuspy subject: 1e-2
 
-#-----------------------------------------------------------------
+#--------------------------------Profile functions---------------------------------
 
 
 #Subject
@@ -174,10 +173,8 @@ def Rapo(E0,perturber_flag):
     elif (perturber_flag==4):
         return np.sqrt(1/E0**2-2/abs(E0)) #Isochrone
 
-#-----------------------------------------------------------------
 
-
-#Orbit
+#-------------------------------Orbit----------------------------------
 
 
 def theta_integrand1(z,alpha,e,perturber_flag):
@@ -268,10 +265,12 @@ def orbit(alpha,e,NR,perturber_flag):
     return THETAp,R
 
 
-#-----------------------------------------------------------------
+#-----------------------------Energy change------------------------------------
 
 
 #General formalism
+
+#Impulse
 
 def I1(r,theta,phi,alpha,e,THETAp,R,rp,perturber_flag):
     
@@ -336,6 +335,7 @@ def delvz(phi,theta,r,alpha,e,THETAp,R,rp,perturber_flag):
     return (I3(r,theta,phi,alpha,e,THETAp,R,rp,perturber_flag)-z*I1(r,theta,phi,alpha,e,THETAp,R,rp,perturber_flag))/j
 
 
+#Center of mass
 
 def delvcmx_integrand(phi,theta,r,alpha,e,THETAp,R,rp,perturber_flag,subject_flag):
     return r**2*rho(r,subject_flag)*np.sin(theta)*delvx(phi,theta,r,alpha,e,THETAp,R,rp,perturber_flag)
@@ -365,6 +365,7 @@ def delEcm(alpha,e,THETAp,R,rmax,rp,NR,perturber_flag,subject_flag):
     I=0.5*delvcm(alpha,e,THETAp,R,rmax,rp,NR,perturber_flag,subject_flag)**2
     return I
 
+#Internal energy
 
 def delEint_integrand(phi,theta,r,alpha,e,THETAp,R,deltavcm,R_half_mass,Mtrunc,mass_ratio,rp,tp,adcorr_flag,perturber_flag,subject_flag):
 
@@ -398,8 +399,9 @@ def delEint(alpha,e,THETAp,R,deltavcm,rmax,R_half_mass,Mtrunc,mass_ratio,rp,tp,a
 #-----------------------------------------------------------------
 
 
-#Tidal approximation
+#Distant tide approximation
 
+#Internal energy
 
 def B1(alpha,e,THETAp,R,rp,perturber_flag):
     mu=Mencp(rp*R,rp,perturber_flag)
@@ -450,6 +452,10 @@ def rsq(alpha,e,Rc,R_half_mass,Mtrunc,mass_ratio,rp,tp,adcorr_flag,perturber_fla
 
 def delEint_tidal(alpha,e,THETAp,R,Rc,R_half_mass,Mtrunc,mass_ratio,rp,tp,adcorr_flag,perturber_flag,subject_flag):
     return chi(alpha,e,THETAp,R,rp,perturber_flag)*rsq(alpha,e,Rc,R_half_mass,Mtrunc,mass_ratio,rp,tp,adcorr_flag,perturber_flag,subject_flag)
+
+
+#.................................................................
+
 
 
 

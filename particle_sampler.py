@@ -29,32 +29,31 @@ from matplotlib.animation import FuncAnimation
 
 #-----------------------------------------------------------------
 
-Np=1000000 #100000,1000000
-Nrand=10000
+Np=1000000       #No of subject stars
+Nrand=10000      #Maximum no of random realizations for each star
 
 #-----------------------------------------------------------------
 
+#--------Functions--------
+
 def Psig(rg):
-    f1=1/np.sqrt(1+rg**2) #Plummer sphere
-    #f1=1/(1+rg)            #Hernquist sphere
-    #f1=1/rg		    #Pt mass
-    #f1=phi_spline(rg)              #Simulation
+    f1=1/np.sqrt(1+rg**2)  #Plummer sphere
     return f1
 
 def rhog(rg):
-    f1=(3/(4*np.pi))*(1/(1+rg**2)**2.5)    
+    f1=(3/(4*np.pi))*(1/(1+rg**2)**2.5)  #Plummer sphere
     return f1
 
 def mass_enc(rg):
-    return rg**3/(1+rg**2)**1.5 #Plummer
+    return rg**3/(1+rg**2)**1.5  #Plummer sphere
 
 def fdist(e):
-    f=(3/(7*np.pi**1.5))*(2*abs(e))**3.5
+    f=(3/(7*np.pi**1.5))*(2*abs(e))**3.5  #Plummer sphere
     return f
 
 #----------------------------------------------------------------------
 
-#Initial conditions
+#--------Sampling positions and velocities of subject stars--------
 
 x=np.zeros(Np)                 
 y=np.zeros(Np)
@@ -64,11 +63,10 @@ vy=np.zeros(Np)
 vz=np.zeros(Np)
 Eg=np.zeros(Np)
 
-Rmax=20
+Rmax=20              #Truncation radius of subject
 
 Mmin=0
 Mmax=1
-#Mmax=(Rmax**3)/(1+Rmax**2)**1.5
 
 costhetamin=-1
 costhetamax=1
@@ -86,7 +84,7 @@ start=time.time()
 for i in range(Np):
 
 
-    for j in range(Nrand):
+    for j in range(Nrand):                                                     #Sampling r
 
         randr=np.random.choice(a=Nrand+1, size=1)    
         Mratio=Mmin+(randr[0]/Nrand)*(Mmax-Mmin)
@@ -98,7 +96,7 @@ for i in range(Np):
             break
 
 
-    randcostheta=np.random.choice(a=Nrand+1, size=1)   
+    randcostheta=np.random.choice(a=Nrand+1, size=1)                           #Sampling position angles
     costheta=costhetamin+(randcostheta[0]/Nrand)*(costhetamax-costhetamin)
     sintheta=np.sqrt(1-costheta**2)
 
@@ -110,10 +108,10 @@ for i in range(Np):
     yr=rg*sintheta*np.sin(phi)
 
     
-    vesc=np.sqrt(2*Psig(rg))
+    vesc=np.sqrt(2*Psig(rg))                                                   #Escape velocity at r
 
     
-    for j in range(Nrand):
+    for j in range(Nrand):                                                     #Sampling v
 
         randv=np.random.choice(a=Nrand+1, size=1)
         vr=vmin+(randv[0]/Nrand)*(vesc-vmin)
@@ -131,7 +129,7 @@ for i in range(Np):
         if (fr<=vr**2*fdist(e)):            
             break
 
-    randcosthetav=np.random.choice(a=Nrand+1, size=1)   
+    randcosthetav=np.random.choice(a=Nrand+1, size=1)                          #Sampling velocity angles
     costhetav=costhetavmin+(randcosthetav[0]/Nrand)*(costhetavmax-costhetavmin)
     sinthetav=np.sqrt(1-costhetav**2)
 
@@ -157,6 +155,8 @@ for i in range(Np):
     
 #---------------------------------------------------------------------
 
+#--------Writing data in a file--------
+
 hf=h5py.File('particle_data_plummer.h5','w')
 hf.create_dataset('x',data=x)
 hf.create_dataset('y',data=y)
@@ -166,10 +166,10 @@ hf.create_dataset('vy',data=vy)
 hf.create_dataset('vz',data=vz)
 hf.close()
 
+
 #---------------------------------------------------------------------
 
-
-#Testing
+#--------Testing--------
 
 dr=0.0001  #0.07
 r0=0.5
@@ -218,6 +218,8 @@ dr=r[1]-r[0]
 #dr=0.001
 density_recovered=np.zeros(Nr)
 density=np.zeros(Nr)
+massenc_recovered=np.zeros(Nr)
+massenc=np.zeros(Nr)
 
 start=time.time()
 
@@ -231,9 +233,9 @@ for i in range(Nr):
             counter+=1
 
     #density_recovered[i]=(counter/(4*np.pi*r[i]**2*dr))/Np
-    density_recovered[i]=counter/Np
+    massenc_recovered[i]=counter/Np
     #density[i]=rhog(r[i])
-    density[i]=mass_enc(r[i])
+    massenc[i]=mass_enc(r[i])
 
     print (i)
     end=time.time()
@@ -241,13 +243,13 @@ for i in range(Nr):
     print ("Time taken: %f s" %(dt))
 
 fig2,ax2=plt.subplots()
-ax2.semilogx(r,density_recovered,color='b')
-ax2.semilogx(r,density,color='r')
+ax2.semilogx(r,massenc_recovered,color='b')
+ax2.semilogx(r,massenc,color='r')
 
 plt.show()
 
 
-
+#---------------------------------------------------------------------
 
 
 
