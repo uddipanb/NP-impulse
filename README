@@ -24,7 +24,7 @@ The computation is performed non-pertubatively, without making any approximation
 Throughout we assume spherically symmetric subject and perturber density profiles. 
 The cases of axisymmetric spheroidal and disk perturber profiles will be uploaded soon. 
 We compare our general formalism with the distant tide approximation results of Spitzer 1958 and Gnedin et al. 1999.
-See Banik & van den Bosch 2020 for more details.
+See Banik & van den Bosch 2020 (https://arxiv.org/abs/2010.06632) for more details.
 
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
@@ -59,10 +59,10 @@ epsinit=1e-7                  #Integration limits: Lower limit a -> a*(1+epsinit
                                                                                                                                    #Default: 1e-7
 EPSABS_plummer                #Absolute tolerance for the integrals for Plummer sphere subject                                     #Default: 1e-8
 EPSREL_plummer                #Relative tolerance for the integrals for Plummer sphere subject                                     #Default: 1e-8
-EPSABS=1e-7                   #Absolute tolerance for the integrals for other subjects                                             #Default: 1e-7
-EPSREL=1e-2                   #Relative tolerance for the integrals for other subjects                                             #Default: Cored subject: 1e-7, Cuspy subject: 1e-2 
-maxiter=100                   #Maximum no of iterations for adaptive quadrature                                                    #Default: 100
-zetamax=1e4                   #Upper limit of integerals involved in computing chi(b) in the Gnedin et al. 1999 formalism for distant encounters
+EPSABS                        #Absolute tolerance for the integrals for other subjects                                             #Default: 1e-7
+EPSREL                        #Relative tolerance for the integrals for other subjects                                             #Default: Cored subject: 1e-7, Cuspy subject: 1e-2 
+maxiter                       #Maximum no of iterations for adaptive quadrature                                                    #Default: 100
+zetamax                       #Upper limit of integerals involved in computing chi(b) in the Gnedin et al. 1999 formalism for distant encounters
                                                                                                                                    #Default: 1e4
 
 #---------eccentric_functions_spherical_perturber.py---------
@@ -199,7 +199,7 @@ Rinterpmax                   #Maximum projected radius (infinite subject) for in
 Rtruncinterpmax              #Maximum projected radius (truncated subject) for integration to compute the internal energy chane for zero impact parameter
 NRinterp                     #No of Rinterp
 
-perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 4: NFW, 5: Isochrone
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 3, Hernquist sphere, 4: NFW, 5: Isochrone
 subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
  
 
@@ -233,7 +233,7 @@ Rc=np.logspace(np.log10(Rcmin),np.log10(Rcmax),num=Nc)   #Truncation radii
 rp                           #Perturber scale radius rp
 rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax (>bmin for point perturber)
 
-perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 4: NFW, 5: Isochrone
+perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 3: Hernquist sphere, 4: NFW, 5: Isochrone
 subject_flag                 #subject_flag: 1: Plummer sphere, 2: Hernquist sphere, 3: NFW
 
 
@@ -249,9 +249,8 @@ EPSREL0                      #Relative tolerance of the integration for zero imp
 #---------straight_encounter_spherical_mass_loss.ipynb---------
 
 The ipython notebook "straight_encounter_spherical_mass_loss.ipynb" computes the unbound fraction of subject stars during mutual encounters between
-globular clusters (modelled as Plummer spheres) and cold dark matter haloes (modelled as NFW spheres). The impulse is given to each of 10^6 
-subject stars sampled from the self-consistent distribution function (using particle_sampler.py). The position and velocity data of the stars for
-Plummer sphere ad NFW density profiles of the subject are stored in the HDF5 files, particle_data_plummer.h5 and particle_data_NFW.h5 respectively.
+identical Hernquist spheres. The impulse is given to each of 10^6 subject stars sampled from the self-consistent distribution function (using particle_sampler.py). 
+The position and velocity data of the stars for Hernquist density profiles of the subject are stored in the HDF5 file, particle_data_hernquist.h5. 
 The unbound fraction is calculated by noting what fraction of the stars gain internal energy exceeding their initial binding energy. The unbound fraction
 is plotted as a function of the encounter velocity for different values of impact parameter.
 
@@ -259,30 +258,22 @@ is plotted as a function of the encounter velocity for different values of impac
 #-------------Input parameters--------------
 #-------------------------------------------
 
-mass_ratio                   #Subject mass Ms/Perturber mass Mp
+mass_ratio=1                 #Subject mass Ms/Perturber mass Mp
 q=1/mass_ratio
-rp                           #Perturber scale radius rp
-Rc                           #Truncation radius (<bmin for point perturber)
-rmax                         #Maximum radius for integration over subject profile; should be at least 2 times bmax; c (NFW subject); (<bmin for point perturber) 
+rp=1                         #Perturber scale radius rp in units of rs
+Rc=1                         #Truncation radius in units of rs
+rmax=1000000                 #Maximum radius for integration over subject profile
+    
+perturber_flag=3             #3: Hernquist sphere
+subject_flag=2               #2: Hernquist sphere
 
-perturber_flag               #perturber_flag: 1: Point mass, 2: Plummer sphere, 3: Hernquist sphere, 4: NFW, 5: Isochrone
-subject_flag                 #subject_flag: 1: Plummer sphere, 3: NFW
+#Impact parameter
+    
+impact=1                
 
-if (subject_flag==3):        #NFW concentration
-    c1=Rc                    
-    c2=rmax
-else:
-    c1=np.nan
-    c2=np.nan
+adcorr_flag=0                #Adiabatic correction- 1: on, 0: off
 
-impact                       #Impact parameter
-
-vpmin                        #Minimum encounter velocity
-vpmax                        #Maximum encounter velocity
-Nvp                          #No of points in encounter velocity range
-vp=np.logspace(np.log10(vpmin),np.log10(vpmax),num=Nvp) #Encounter velocity
-
-adcorr_flag                  #Adiabatic correction- 1: on, 0: off
+gravfocusing_flag=0          #Gravitational focusing- 1: on, 0: off
 
 
 # -----------------------------------------------------------------------------------
@@ -294,6 +285,9 @@ The ipython notebook "eccentric_encounter_spherical.ipynb" computes the total in
 along an eccentric orbit in the perturber potential. The internal energy change is plotted as a function of the orbital eccentricity
 for fixed orbital energy and perturber and subject profiles.
 
+#-------------------------------------------
+#-------------Input parameters--------------
+#-------------------------------------------
 
 Rc                           #Truncation radius 1
 x                            #Truncation radius 2/ Truncation radius 1
@@ -327,7 +321,7 @@ adcorr_flag                  #Adiabatic correction: 1- on, 0- off
 
 # -----------------------------------------------------------------------------------
 
-The plots in Banik & van den Bosch 2020 are generated in the "..._plotter.ipynb" ipython notebooks.
+The plots in Banik & van den Bosch 2020 (https://arxiv.org/abs/2010.06632) are generated in the "..._plotter.ipynb" ipython notebooks.
 
 # -----------------------------------------------------------------------------------
 

@@ -168,20 +168,13 @@ def impulse_integral(s,rp,perturber_flag):
         return 1/(s**2+rp**2)
 
     elif (perturber_flag==3):            #Hernquist
-        if (s<rp):
-            A=np.log((rp+np.sqrt(rp**2-s**2))/s)
-            return (1+(rp*A)/np.sqrt(rp**2-s**2))/(rp**2-s**2)
-        else:
-            A=np.arctan(np.sqrt((s-rp)/(s+rp)))
-            return (1-(2*rp*A)/np.sqrt(s**2-rp**2))/(s**2-rp**2)
+        Al=np.log((rp+np.sqrt(abs(rp**2-s**2)))/s)
+        Ag=np.arctan(np.sqrt(abs((s-rp)/(s+rp))))
+        Il=-1+(rp*Al)/np.sqrt(abs(rp**2-s**2))
+        Ig=1-(2*rp*Ag)/np.sqrt(abs(rp**2-s**2))
+        return (np.heaviside(rp-s,1)*Il+np.heaviside(s-rp,1)*Ig)/abs(rp**2-s**2)
 
     elif (perturber_flag==4):            #NFW
-        '''if (s<rp):
-            A=np.log((rp+np.sqrt(rp**2-s**2))/s)
-            return (np.log(s/(2*rp))+(rp*A)/np.sqrt(rp**2-s**2))/s**2
-        else:
-            A=np.arctan(np.sqrt((s-rp)/(s+rp)))
-            return (np.log(s/(2*rp))+(2*rp*A)/np.sqrt(s**2-rp**2))/s**2'''
         Al=np.log((rp+np.sqrt(abs(rp**2-s**2)))/s)
         Ag=np.arctan(np.sqrt(abs((s-rp)/(s+rp))))
         return np.heaviside(rp-s,1)*((np.log(s/(2*rp))+(rp*Al)/np.sqrt(abs(rp**2-s**2)))/s**2)+np.heaviside(s-rp,1)*((np.log(s/(2*rp))+(2*rp*Ag)/np.sqrt(abs(s**2-rp**2)))/s**2)
@@ -407,10 +400,10 @@ def F0_integrand_plummer(r,rp,subject_flag):
     return rho(r,subject_flag)*r**2*(A*C+B)
 
 def Sigmas_integrand(r,R,Rcut,subject_flag):
-    return rho(r,subject_flag)/np.sqrt(r**2-R**2)
+    return (r*rho(r,subject_flag))/np.sqrt(r**2-R**2)
 
 def Sigmas(R,Rcut,subject_flag):
-    return integrate.quad(Sigmas_integrand,R*(1+epsinit),Rcut,args=(R,Rcut,subject_flag,),epsabs=EPSABS,epsrel=EPSREL)[0]
+    return 2*integrate.quad(Sigmas_integrand,R*(1+epsinit),Rcut,args=(R,Rcut,subject_flag,),epsabs=EPSABS,epsrel=EPSREL)[0]
 
 def F0_integrand(R,rp,trunc,Sigmas_spline,Sigmastrunc_spline,perturber_flag):
     if (trunc==0):

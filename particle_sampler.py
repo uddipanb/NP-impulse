@@ -29,27 +29,54 @@ from matplotlib.animation import FuncAnimation
 
 #-----------------------------------------------------------------
 
-Np=1000000       #No of subject stars
-Nrand=10000      #Maximum no of random realizations for each star
+Np=100000        #No of subject stars (1000000)
+Nrand=100000      #Maximum no of random realizations for each star
+EPS=1e-8          #1e-6
 
 #-----------------------------------------------------------------
 
 #--------Functions--------
 
 def Psig(rg):
-    f1=1/np.sqrt(1+rg**2)  #Plummer sphere
+    #f1=1/np.sqrt(1+rg**2)                #Plummer sphere
+    f1=1/(1+rg)                           #Hernquist sphere
     return f1
 
 def rhog(rg):
-    f1=(3/(4*np.pi))*(1/(1+rg**2)**2.5)  #Plummer sphere
+    #f1=(3/(4*np.pi))*(1/(1+rg**2)**2.5)  #Plummer sphere
+    f1=(1/(2*np.pi))*(1/(rg*(1+rg)**3))   #Hernquist sphere
     return f1
 
 def mass_enc(rg):
-    return rg**3/(1+rg**2)**1.5  #Plummer sphere
+    #f1=rg**3/(1+rg**2)**1.5              #Plummer sphere
+    f1=rg**2/(1+rg)**2                    #Hernquist sphere
+    return f1
 
 def fdist(e):
-    f=(3/(7*np.pi**1.5))*(2*abs(e))**3.5  #Plummer sphere
+    eps=abs(e)
+    #f=(3/(7*np.pi**1.5))*(2*eps)**3.5    #Plummer sphere
+    f=(1/(8*np.sqrt(2)*np.pi**3))*((3*np.arcsin(np.sqrt(eps))+np.sqrt(eps*(1-eps))*(1-2*eps)*(8*eps**2-8*eps-3))/(1-eps)**2.5)                                #Hernquist sphere
     return f
+
+Ne=100000
+energy=np.logspace(np.log10(EPS),np.log10(1-EPS),num=Ne)
+loge=np.log10(energy)
+
+FDIST=fdist(energy)
+logFDIST=np.log10(FDIST)
+
+Fspline=CubicSpline(loge,logFDIST)
+Fspline_deriv=Fspline.derivative(nu=1)
+FDIST_DERIV=(FDIST/energy)*Fspline_deriv(loge)
+
+def max_energy_finder(E,PSI):
+    logE=np.log10(E)
+    f1=fdist(E)
+    df1dE=(f1/E)*Fspline_deriv(logE)
+    return f1/df1dE+E-PSI
+
+def max_energy(PSI):
+    return optimize.brentq(max_energy_finder,EPS,1-EPS,args=(PSI))
 
 #----------------------------------------------------------------------
 
@@ -63,7 +90,7 @@ vy=np.zeros(Np)
 vz=np.zeros(Np)
 Eg=np.zeros(Np)
 
-Rmax=20              #Truncation radius of subject
+Rmax=5000              #Truncation radius of subject
 
 Mmin=0
 Mmax=1
@@ -86,22 +113,33 @@ for i in range(Np):
 
     for j in range(Nrand):                                                     #Sampling r
 
-        randr=np.random.choice(a=Nrand+1, size=1)    
-        Mratio=Mmin+(randr[0]/Nrand)*(Mmax-Mmin)
+        #randr=np.random.choice(a=Nrand+1, size=1)    
+        #Mratio=Mmin+(randr[0]/Nrand)*(Mmax-Mmin)
+        randr=np.random.uniform(0,1)
+        Mratio=Mmin+randr*(Mmax-Mmin)
         
-        Menc=Mratio*((1+Rmax**2)**1.5/Rmax**3)
-        rg=np.sqrt(1/(Menc**(-2.0/3)-1))
+        #Menc=Mratio*((1+Rmax**2)**1.5/Rmax**3)                                #Plummer
+        #rg=np.sqrt(1/(Menc**(-2.0/3)-1))
+
+        #Menc=Mratio*((1+Rmax)**2/Rmax**2)                                      #Hernquist
+        Menc=Mratio
+        
+        rg=1/(Menc**(-0.5)-1)
 
         if (rg<=Rmax):
             break
 
 
-    randcostheta=np.random.choice(a=Nrand+1, size=1)                           #Sampling position angles
-    costheta=costhetamin+(randcostheta[0]/Nrand)*(costhetamax-costhetamin)
+    #randcostheta=np.random.choice(a=Nrand+1, size=1)                           #Sampling position angles
+    #costheta=costhetamin+(randcostheta[0]/Nrand)*(costhetamax-costhetamin)
+    randcostheta=np.random.uniform(0,1)
+    costheta=costhetamin+randcostheta*(costhetamax-costhetamin)
     sintheta=np.sqrt(1-costheta**2)
 
-    randphi=np.random.choice(a=Nrand+1, size=1)
-    phi=phimin+(randphi[0]/Nrand)*(phimax-phimin)
+    #randphi=np.random.choice(a=Nrand+1, size=1)
+    #phi=phimin+(randphi[0]/Nrand)*(phimax-phimin)
+    randphi=np.random.uniform(0,1)
+    phi=phimin+randphi*(phimax-phimin)
     
     zr=rg*costheta
     xr=rg*sintheta*np.cos(phi)
@@ -113,28 +151,41 @@ for i in range(Np):
     
     for j in range(Nrand):                                                     #Sampling v
 
-        randv=np.random.choice(a=Nrand+1, size=1)
-        vr=vmin+(randv[0]/Nrand)*(vesc-vmin)
+        #randv=np.random.choice(a=Nrand+1, size=1)
+        #vr=vmin+(randv[0]/Nrand)*(vesc-vmin)
+        randv=np.random.uniform(0,1)
+        vr=vmin+randv*(vesc-vmin)
         e=Psig(rg)-0.5*vr**2
 
-        randf=np.random.choice(a=Nrand+1, size=1)
+        #randf=np.random.choice(a=Nrand+1, size=1)
+        randf=np.random.uniform(0,1)
 
         fmin=0
-        v_fmax=(2/3.0)*np.sqrt(Psig(rg))
-        e_fmax=Psig(rg)-0.5*v_fmax**2
+        #v_fmax=(2/3.0)*np.sqrt(Psig(rg))                                      #Plummer
+        #e_fmax=Psig(rg)-0.5*v_fmax**2
+        
+        
+        e_fmax=max_energy(Psig(rg))                                            #Hernquist
+        v_fmax=np.sqrt(2*(Psig(rg)-e_fmax))        
+
         fmax=(v_fmax**2)*fdist(e_fmax)
 
-        fr=fmin+(randf[0]/Nrand)*(fmax-fmin)
+        #fr=fmin+(randf[0]/Nrand)*(fmax-fmin)
+        fr=fmin+randf*(fmax-fmin)
 
         if (fr<=vr**2*fdist(e)):            
             break
 
-    randcosthetav=np.random.choice(a=Nrand+1, size=1)                          #Sampling velocity angles
-    costhetav=costhetavmin+(randcosthetav[0]/Nrand)*(costhetavmax-costhetavmin)
+    #randcosthetav=np.random.choice(a=Nrand+1, size=1)                          #Sampling velocity angles
+    #costhetav=costhetavmin+(randcosthetav[0]/Nrand)*(costhetavmax-costhetavmin)
+    randcosthetav=np.random.uniform(0,1)
+    costhetav=costhetavmin+randcosthetav*(costhetavmax-costhetavmin)
     sinthetav=np.sqrt(1-costhetav**2)
 
-    randphiv=np.random.choice(a=Nrand+1, size=1)
-    phiv=phivmin+(randphiv[0]/Nrand)*(phivmax-phivmin)        
+    #randphiv=np.random.choice(a=Nrand+1, size=1)
+    #phiv=phivmin+(randphiv[0]/Nrand)*(phivmax-phivmin)        
+    randphiv=np.random.uniform(0,1)
+    phiv=phivmin+randphiv*(phivmax-phivmin)
 
     vzr=vr*costhetav
     vxr=vr*sinthetav*np.cos(phiv)
@@ -157,7 +208,18 @@ for i in range(Np):
 
 #--------Writing data in a file--------
 
-hf=h5py.File('particle_data_plummer.h5','w')
+#hf=h5py.File('particle_data_plummer.h5','w')              #Plummer
+#hf=h5py.File('particle_data_hernquist.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_rmax1e1.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_rmax1e4.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_rmax1e5.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_rmax1e6.h5','w')             #Hernquist
+
+#hf=h5py.File('../data/particle_data_hernquist_Np1e5_rmax1e5_r20.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_Np1e5_rmax1e4_r3.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_Np1e5_rmax5e4_r1.h5','w')             #Hernquist
+#hf=h5py.File('../data/particle_data_hernquist_Np1e5_rmax1e3_r20.h5','w')             #Hernquist
+hf=h5py.File('../data/particle_data_hernquist_Np1e5_rmax5e3_r20.h5','w')             #Hernquist
 hf.create_dataset('x',data=x)
 hf.create_dataset('y',data=y)
 hf.create_dataset('z',data=z)
@@ -171,10 +233,10 @@ hf.close()
 
 #--------Testing--------
 
-dr=0.0001  #0.07
-r0=0.5
+dr=0.07  #0.07
+r0=2
 
-nbins=120
+nbins=20
 num_eg=np.zeros(nbins)
 eg=np.linspace(0,Psig(r0),nbins+1)
 del_eg=(eg.max()-eg.min())/nbins
@@ -206,12 +268,13 @@ eg2=np.linspace(0,Psig(r0),nbins)
 
 fig1,ax1=plt.subplots()
 ax1.plot(eg2,num_eg,color='b')
+#ax1.hist(num_eg,bins=eg2,color='b')
 ax1.plot(eg1,f,color='k',ls='--')
 
 
 
 
-Nr=20
+Nr=10 #20
 r=np.logspace(-1,np.log10(Rmax),num=Nr)
 #r=np.linspace(0.1,Rmax,Nr)
 dr=r[1]-r[0]
